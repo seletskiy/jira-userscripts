@@ -457,6 +457,8 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 				setTimeout(function() {callback(true)}, 5000);
 			}(false));
 
+			var debug_startTime = lib.now();
+
 			var commitWorklog = function (stopOnly) {
 				ui.worklogForm.find(":input").attr("disabled");
 				var token = lib.$("#atlassian-token").attr('content');
@@ -480,7 +482,10 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 						comment: description
 					});
 					
-					lib.setCookie('jira4_worklog_form', form.attr('outerHTML'));
+					// debug!
+					lib.setCookie('jira4_worklog_last_form', form.serialize());
+					lib.setCookie('jira4_worklog_last_open', lib.dateDiff(lib.now(), debug_startTime));
+
 					form.submit();
 				}
 				
@@ -491,7 +496,15 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 							action: 301,
 							atl_token: authToken
 						}, function (response) {
+							if (firstTry) {
+								lib.setCookie('jira4_worklog_last_token_first', authToken);
+								lib.setCookie('jira4_worklog_last_token_second', "none");
+							} else {
+								lib.setCookie('jira4_worklog_last_token_second', authToken);
+							}
 							if (response.match(/Session Expired/i)) {
+								lib.setCookie('jira4_worklog_last_token_first', "");
+								lib.setCookie('jira4_worklog_last_token_second', "");
 								var newToken = (response.
 									match(/name="atl_token"\s+value="([^"]*)"/) || [null, null])[1];
 									
