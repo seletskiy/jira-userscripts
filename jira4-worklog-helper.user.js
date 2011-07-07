@@ -1,6 +1,6 @@
-﻿// JIRA4 Worklog Helper
-// Version 1.3
-// 07-02-2011
+// JIRA4 Worklog Helper
+// Version 1.3+
+// 08-06-2011
 // Autor: Stanislav Seletskiy <s.seletskiy@gmail.com>
 
 // This is a Greasemonkey user script.
@@ -22,13 +22,16 @@
 // @description   Tracks time have being spent on issues / Подсчитывает время, затраченное на задачи
 // @match         http://jira.ngs.local/*
 // @match         http://jira/*
-// @version       1.3
+// @version       1.3+
 // @include       http://jira.ngs.local/*
 // @include       http://jira/*
 // ==/UserScript==
 
 (function () {
 	var script = function () {
+		//
+		// Library functions.
+		// 
 		var lib = {
 			$: window.jQuery,
 			style: function style(selector, rules) {
@@ -143,15 +146,26 @@
 			}
 		};
 
+		//
+		// Hotkeys codes.
+		//
 		var hotkeys = {
-			startStopProgress: 83
+			startStopProgress: 83,
+			esc: 27,
+			enter: 13
 		};
 		
+		//
+		// Language detection.
+		//
 		var lang = {
 			'Create Issue': 'en',
 			'Создать': 'ru'
 		}[lib.$("#create_link").text()] || 'en';
 
+		//
+		// Months for different languages.
+		//
 		var months = {
 			"ru": {
 				"Jan": "янв", "Feb": "фев",
@@ -164,6 +178,9 @@
 			"en": {}
 		};
 
+		//
+		// Messages for different languages.
+		//
 		var messages = {
 			"ru": {
 				"Time Spent": "Затрачено времени",
@@ -189,6 +206,9 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			"en": {}
 		};
 
+		//
+		// User interface elements.
+		//
 		var ui = {
 			stopProgressButton: lib.$("#action_id_301"),
 			startProgressButton: lib.$("#action_id_4"),
@@ -212,10 +232,10 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 				input.change(updateTime);
 				input.keyup(function (e) {
 					e.stopPropagation();
-					if (e.keyCode == 13) {
+					if (e.keyCode == hotkeys.enter) {
 						updateTime();
 						input[0].blur();
-					} else if (e.keyCode == 27) {
+					} else if (e.keyCode == hotkeys.esc) {
 						input.removeClass("focused");
 						input[0].blur();
 					}
@@ -310,7 +330,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 				form.keyup(function (e) {
 					if (e.keyCode == hotkeys.startStopProgress) {
 						e.stopPropagation();
-					} else if (e.keyCode == 13 && e.ctrlKey) {
+					} else if (e.keyCode == hotkeys.enter && e.ctrlKey) {
 						form.submit();
 					}
 				});
@@ -325,11 +345,6 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 		ui.worklogSubmit = ui.worklogForm.find("#worklog-submit");
 		ui.worklogSubmitSkip = ui.worklogForm.find("#worklog-submit-skip");
 
-		var page = {
-			stopProgress: ui.stopProgressButton.length,
-			startProgress: ui.startProgressButton.length
-		}
-
 		var isTyping = function () {
 			var someElementIsActive = false;
 			lib.$('input[type=text], textarea, select').each(function () {
@@ -341,6 +356,13 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			return someElementIsActive;
 		};
 
+		//
+		// Current page detection.
+		//
+		var page = {
+			stopProgress: ui.stopProgressButton.length,
+			startProgress: ui.startProgressButton.length
+		}
 
 		if (page.stopProgress) {
 			var issue = {
@@ -350,6 +372,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 
 			lib.$("#action_id_5").addClass("first");
 			lib.$("#action_id_4").addClass("last");
+			lib.$("#action_id_301").parent().addClass("last");
 
 			if (issue.started.getTime() == 0) {
 				var historyUrl = lib.$('#changehistory-tabpanel').attr('href') ||
@@ -416,16 +439,23 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 				}
 			} );
 
-			var checkIssueStatus = function () {
+			//
+			// Periodic check for issue status.
+			//
+			(function (timeout) {
 				var inProgress = lib.getCookie("issue_in_progress");
 				if (inProgress.length && inProgress == "0") {
-					location.reload();
+					if (!timeout && page.stopProgress) {
+						lib.setCookie("issue_in_progress", 1);
+					} else {
+						location.reload();
+					}
 				}
 
-				setTimeout(arguments.callee, 5000);
-			};
+				var callback = arguments.callee;
 
-			checkIssueStatus();
+				setTimeout(function() {callback(true)}, 5000);
+			}(false));
 
 			var commitWorklog = function (stopOnly) {
 				ui.worklogForm.find(":input").attr("disabled");
@@ -450,10 +480,11 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 						comment: description
 					});
 					
+					lib.setCookie('jira4_worklog_form', form.attr('outerHTML'));
 					form.submit();
 				}
 				
-				var stopIssue = function (id, authToken, tryCount) {
+				var stopIssue = function (id, authToken, firstTry) {
 					lib.$.get(
 						"/secure/WorkflowUIDispatcher.jspa", {
 							id: id,
@@ -461,39 +492,30 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 							atl_token: authToken
 						}, function (response) {
 							if (response.match(/Session Expired/i)) {
-								if (tryCount > 1) {
-									alert(lib._("Your session expired, please " +
-										"try to reload a page or relogin to Jira."));
-									return;
-								}
-								
 								var newToken = (response.
 									match(/name="atl_token"\s+value="([^"]*)"/) || [null, null])[1];
 									
-								if (newToken) {
-									stopIssue(id, newToken, tryCount + 1);
+								if (newToken && firstTry) {
+									stopIssue(id, newToken, false);
 								} else {
-									alert(lib._("Your session expired, please " +
+									alert(lib._("Your session has expired, please " +
 										"try to reload a page or relogin to Jira."));
 								}
-								
-								return;
-							}
-							
-							if (stopOnly) {
-								location.reload(true);
 							} else {
-								//form.submit();
-								increaseTime(id, authToken,
-									ui.spentTimeFinalIndicator.val(),
-									ui.worklogDescription.val());
+								if (stopOnly) {
+									location.reload(true);
+								} else {
+									increaseTime(id, authToken,
+										ui.spentTimeFinalIndicator.val(),
+										ui.worklogDescription.val());
+								}
 							}
 						}
 					);
 				}
 				
 				lib.setCookie("issue_in_progress", 0);
-				stopIssue(issue.id, token, 1);
+				stopIssue(issue.id, token, true);
 			};
 
 			ui.worklogSubmit.click(function (e) {
@@ -528,13 +550,15 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 					} else {
 						ui.stopProgressButton.click();
 					}
-				} else if (e.keyCode == 27) {
+				} else if (e.keyCode == hotkeys.esc) {
 					ui.worklogForm.hide();
 				}
 			});
 		}
 
 		if (page.startProgress) {
+			lib.$("#action_id_301").parent().addClass("last");
+
 			ui.startProgressButton.click(function () {
 				lib.setCookie("worklog_started", lib.now().getTime());
 				lib.setCookie("issue_in_progress", 1);
@@ -562,8 +586,11 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			}
 		});
 
-		var addHotkeys = function () {
-			setTimeout(addHotkeys, 100);
+		//
+		// Adds hotkey info in standart JIRA help panel.
+		//
+		(function () {
+			setTimeout(arguments.callee, 100);
 			var container = lib.$("body > div#shortcut-dialog").filter(":last");
 			var text = lib._("Start / Stop Progress") + ":";
 			if( container.length ) {
@@ -578,10 +605,11 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 								"<dd><kbd>s</kbd></dd>" +
 								"</dl></li>");
 			}
-		};
+		}());
 
-		addHotkeys();
-
+		//
+		// Styles section.
+		// 
 		var styles = {
 			"#worklog-spent-time": [
 				"border: 1px solid #ddd",
@@ -636,8 +664,6 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 		for (selector in styles) {
 			lib.style(selector, styles[selector]);
 		}
-
-		lib.$("#action_id_301").parent().addClass("last");
 	}
 
 	function inject(callback) {
