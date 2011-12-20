@@ -218,6 +218,10 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 		"en": {}
 	};
 
+	var globals = {
+		stopRefreshing: false
+	};
+
 	//
 	// User interface elements.
 	//
@@ -449,7 +453,9 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 				if (!timeout && page.stopProgress) {
 					lib.setCookie("issue_in_progress", 1);
 				} else {
-					location.reload();
+					if (globals.stopRefreshing == false) {
+						location.reload();
+					}
 				}
 			}
 
@@ -473,6 +479,8 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			}
 
 			var increaseTime = function (id, authToken, time, description) {
+				globals.stopRefreshing = true;
+
 				var oldTimeSpent = lib.$('#tt_single_values_spent').text().replace(/^\s*|\s*$/g, '');
 				var form = lib.$.post(
 					"/secure/CreateWorklog.jspa", {
@@ -489,7 +497,6 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 
 						if (newTimeSpent == null) {
 							lib.$('body').append(lib.$('<textarea>').text(response));
-							return;
 						}
 
 						if (oldTimeSpent == newTimeSpent) {
