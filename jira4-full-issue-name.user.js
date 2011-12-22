@@ -58,8 +58,6 @@
 		ui.issueNameField.find('input')
 			.val(
 				ui.issueKey.text() + ": " + ui.issueSummary.text())
-			.attr(
-				'readonly', true)
 			.click(function () {
 					this.select();
 				});
