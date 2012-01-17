@@ -218,7 +218,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 		"en": {}
 	};
 
-	var globals = {
+	window.jira4_worklog_helper = {
 		stopRefreshing: false
 	};
 
@@ -453,7 +453,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 				if (!timeout && page.stopProgress) {
 					lib.setCookie("issue_in_progress", 1);
 				} else {
-					if (globals.stopRefreshing == false) {
+					if (window.jira4_worklog_helper.stopRefreshing == false) {
 						location.reload();
 					}
 				}
@@ -479,8 +479,6 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			}
 
 			var increaseTime = function (id, authToken, time, description) {
-				globals.stopRefreshing = true;
-
 				var oldTimeSpent = lib.$('#tt_single_values_spent').text().replace(/^\s*|\s*$/g, '');
 				var form = lib.$.post(
 					"/secure/CreateWorklog.jspa", {
@@ -510,6 +508,8 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			}
 
 			var stopIssue = function (id, authToken, firstTry) {
+				window.jira4_worklog_helper.stopRefreshing = true;
+
 				lib.$.get(
 					"/secure/WorkflowUIDispatcher.jspa", {
 						id: id,
@@ -523,6 +523,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 							lib.setCookie('jira4_worklog_last_token_second', authToken);
 						}
 						if (response.match(/Session Expired/i)) {
+							alert('Session expired!');
 							lib.setCookie('jira4_worklog_last_token_first', "");
 							lib.setCookie('jira4_worklog_last_token_second', "");
 							var newToken = (response.
