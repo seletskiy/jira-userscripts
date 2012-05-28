@@ -137,6 +137,9 @@ var script = function () {
 				hour24 + ":" + d[5]
 			)
 		},
+		fromDateTime: function(datetime) {
+			return new Date(datetime);
+		},
 		isTyping: function () {
 			var someElementIsActive = false;
 			lib.$('input[type=text], textarea, select').each(function () {
@@ -379,7 +382,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 		lib.$("#action_id_301").parent().addClass("last");
 
 		if (issue.started.getTime() == 0) {
-			var historyUrl = lib.$('#changehistory-tabpanel').attr('href') ||
+			var historyUrl = lib.$('#changehistory-tabpanel').data('href') ||
 				location.href;
 
 			// Opera fix.
@@ -388,7 +391,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			lib.$.get(historyUrl, {}, function (response) {
 				// Trying to find last change, that starts issue.
 				var historyPart = (response.
-					match(/id="primary"[^>]*>([\s\S]*)<div[^>]*id="secondary"/i) ||
+					match(/class="issuePanelContainer"[^>]*>([\s\S]*)<div[^>]*id="addcomment"/i) ||
 						[null, ""])[1];
 				var container = lib.$(document.createElement('div')).
 					append(historyPart);
@@ -399,14 +402,14 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 						".activity-new-val:contains(\"[    3\")");
 				var date = historyItems.eq(historyItems.length - 1).
 					parents(".action-body").prev().
-						find(".date").text();
+						find(".date time").attr('datetime');
 
 				if (!date) {
 					alert(lib._('Please press restart an issue, ' +
 						'because I can\'t find a proper date when ' +
 						'issue was started.'))
 				} else {
-					issue.started = lib.fromJiraDate(date);
+					issue.started = lib.fromDateTime(date);
 					if (issue.started.getTime() > lib.now().getTime()) {
 						issue.started.setTime(lib.now().getTime());
 					}
