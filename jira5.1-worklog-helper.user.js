@@ -383,8 +383,9 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 		startProgress: ui.startProgressButton.length
 	}
 
+	var issue = {};
 	var bindStopProgress = function () {
-		var issue = {
+		issue = {
 			id: lib.$("#key-val").attr('rel'),
 			started: new Date(parseInt(lib.getCookie("worklog_started") || 0))
 		};
