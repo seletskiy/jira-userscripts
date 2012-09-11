@@ -1,6 +1,6 @@
 // JIRA5 Worklog Helper
-// Version 1.6 (for JIRA 5.1)
-// 29-08-2012
+// Version 1.7 (for JIRA 5.1)
+// 11-09-2012
 // Autor: Stanislav Seletskiy <s.seletskiy@gmail.com>
 
 // This is a Greasemonkey user script.
@@ -22,7 +22,7 @@
 // @description   Tracks time have being spent on issues / Подсчитывает время, затраченное на задачи
 // @match		  http://jira.ngs.local/*
 // @match		  http://jira/*
-// @version		  1.6
+// @version		  1.7
 // @include		  http://jira.ngs.local/*
 // @include		  http://jira/*
 // ==/UserScript==
@@ -400,7 +400,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 		lib.$("#action_id_301").parent().addClass("last");
 
 		if (issue.started.getTime() == 0) {
-			var historyUrl = lib.$('#changehistory-tabpanel').data('href') ||
+			var historyUrl = lib.$('#changehistory-tabpanel').attr('href') ||
 				location.href;
 
 			// Opera fix.
@@ -411,7 +411,6 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 				var historyPart = (response.
 					match(/class="issuePanelContainer"[^>]*>([\s\S]*)<div[^>]*id="addcomment"/i) ||
 						[null, ""])[1];
-				console.log(historyPart);
 				var container = lib.$(document.createElement('div')).
 					append(historyPart);
 
@@ -600,12 +599,15 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			ui.worklogForm.hide();
 		});
 
-		lib.$(document).keyup(function (e) {
-			if (e.keyCode == hotkeys.startStopProgress) {
+		lib.$(document).keydown(function (e) {
+			if (e.ctrlKey && e.keyCode == hotkeys.startStopProgress) {
 				if (lib.isTyping()) {
 					return ;
 				} else {
 					ui.stopProgressButton.click();
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
 				}
 			} else if (e.keyCode == hotkeys.esc) {
 				ui.worklogForm.hide();
@@ -621,12 +623,14 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 		lib.$("#action_id_301").parent().addClass("last");
 
 		ui.startProgressButton.click(function () {
+            console.log('[worlog helper] issue started');
+
 			lib.setCookie("worklog_started", lib.now().getTime());
 			lib.setCookie("issue_in_progress", 1);
 
 			var checkLoaded = function () {
 				if (lib.$("#action_id_301").length > 0) {
-					console.log(123);
+                    console.log('[worlog helper] loading ui');
 					loadUi();
 					bindStopProgress();
 					return true;
@@ -636,6 +640,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			};
 
 			var refreshLoadState = function () {
+                console.log('[worlog helper] checking load state');
 				if (checkLoaded()) {
 					return;
 				} else {
@@ -648,26 +653,19 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			return true;
 		});
 
-		lib.$(document).keyup(function (e) {
-			if (e.keyCode == hotkeys.startStopProgress) {
+		lib.$(document).keydown(function (e) {
+			if (e.ctrlKey && e.keyCode == hotkeys.startStopProgress) {
 				if (lib.isTyping()) {
 					return ;
 				} else {
+                    e.preventDefault();
+                    e.stopPropagation();
 					ui.startProgressButton.click();
+                    return false;
 				}
 			}
 		});
 	}
-
-	lib.$(':input').keyup(function (e) {
-		if (e.keyCode == hotkeys.startStopProgress) {
-			if (lib.isTyping()) {
-				return ;
-			} else {
-				e.stopPropagation();
-			}
-		}
-	});
 
 	//
 	// Adds hotkey info in standart JIRA help panel.
@@ -686,7 +684,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			container.find("#shortcutsmenu .module:eq(2) .item-details").
 						append("<li><dl>" +
 							"<dt>" + text + "</dt>" +
-							"<dd><kbd>s</kbd></dd>" +
+							"<dd><kbd>Ctrl</kbd>+<kbd>s</kbd></dd>" +
 							"</dl></li>");
 		}
 	}());
