@@ -22,9 +22,11 @@
 // @description   Tracks time have being spent on issues / Подсчитывает время, затраченное на задачи
 // @match		  http://jira.ngs.local/*
 // @match		  http://jira/*
+// @match		  http://jira.rn/*
 // @version		  1.7
 // @include		  http://jira.ngs.local/*
 // @include		  http://jira/*
+// @include		  http://jira.rn/*
 // ==/UserScript==
 
 (function () {
