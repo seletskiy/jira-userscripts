@@ -247,6 +247,7 @@ try to reload a page or relogin to Jira.": "Ваша сессия истекла
 			spentTimeIndicator: (function () {
 				var input = lib.$('<input/>');
 				input.attr("id", "worklog-spent-time");
+				input.css("height", "26px");
 				var updateTime = function () {
 					var oldTime = lib.dateDiff(lib.now(), issue.started);
 					input.val(lib.parseSpent(input.val()));
